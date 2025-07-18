@@ -17,3 +17,4 @@ Icon
 *.pdf
 
 __pycache__/
+data.zip
