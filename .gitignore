@@ -1,6 +1,5 @@
 data/
 models/
-depth_model_colab.ipynb
 
 # Mac specific
 .DS_Store
