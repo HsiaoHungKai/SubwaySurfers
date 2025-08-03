@@ -61,7 +61,9 @@ class DecoderBlock(nn.Module):
 
 
 class SegNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=1, features=64, classification=False) -> None:
+    def __init__(
+        self, in_channels=3, out_channels=1, features=64, classification=False
+    ) -> None:
         super(SegNet, self).__init__()
 
         # Encoder
