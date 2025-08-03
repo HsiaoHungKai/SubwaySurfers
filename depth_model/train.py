@@ -14,27 +14,16 @@ from depth_model.dataset import DepthDataset
 from depth_model.segnet import SegNet
 
 
-def main(num_samples, max_num_epochs, grace_period, reduction_factor):
-    # num_samples=20
-    # max_num_epochs=10
-    # grace_period = 1
-    # reduction_factor = 2
-
-    # param_space = {
-    #     "features": tune.choice([16, 32, 64]),
-    #     "lr": tune.loguniform(1e-4, 1e-1),
-    #     "batch_size": tune.choice([4, 8, 16, 32])
-    # }
-
-    num_samples = 1
-    max_num_epochs = 2
+def main():
+    num_samples = 30
+    max_num_epochs = 10
     grace_period = 1
     reduction_factor = 2
 
     param_space = {
-        "features": tune.grid_search([8, 16]),
-        "lr": 0.01,
-        "batch_size": 4,
+        "features": tune.choice([16, 32, 64]),
+        "lr": tune.loguniform(1e-4, 1e-1),
+        "batch_size": tune.choice([4, 8, 16, 32])
     }
 
     scheduler = ASHAScheduler(
@@ -52,7 +41,7 @@ def main(num_samples, max_num_epochs, grace_period, reduction_factor):
 
     train_with_resources = tune.with_resources(
         train_depth,
-        resources={"cpu": 1, "gpu": 0.5}
+        resources={"cpu": 2, "gpu": 1}
     )
 
     tuner = tune.Tuner(
@@ -190,4 +179,4 @@ def test_loss(model):
 
 
 if __name__ == "__main__":
-    main(num_samples=2, max_num_epochs=10)
+    main()
