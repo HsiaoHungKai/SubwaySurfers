@@ -10,8 +10,8 @@ import ray.cloudpickle as pickle
 import tempfile
 from pathlib import Path
 
-from depth_model.dataset import DepthDataset
-from depth_model.segnet import SegNet
+from dataset import DepthDataset
+from segnet import SegNet
 
 
 def main():
@@ -48,7 +48,7 @@ def main():
         train_with_resources,
         tune_config=tune_config,
         param_space=param_space,
-        run_config=tune.RunConfig(storage_path="/content/results", name="test_experiment")
+        run_config=tune.RunConfig(storage_path="~/depth-model/results", name="test_experiment")
     )
     result = tuner.fit()
 
@@ -104,9 +104,9 @@ def train_depth(config):
         depth_maps_dir='/content/data/depth_data/depth_maps',
         transform=ToTensor(),
     )
-    trainset, valset, _ = torch.utils.data.random_split(dataset, [0.7, 0.15, 0.15])
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=config["batch_size"], shuffle=True, num_workers=0)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=config["batch_size"], shuffle=False, num_workers=0)
+    train_set, val_set, _ = torch.utils.data.random_split(dataset, [0.7, 0.15, 0.15])
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=config["batch_size"], shuffle=True, num_workers=0)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=config["batch_size"], shuffle=False, num_workers=0)
 
     for epoch in range(start_epoch, 10):
         for (X, y) in train_loader:
@@ -159,8 +159,8 @@ def test_loss(model):
         depth_maps_dir='/content/data/depth_data/depth_maps',
         transform=ToTensor(),
     )
-    _, _, test = torch.utils.data.random_split(dataset, [0.7, 0.15, 0.15])
-    test_loader = torch.utils.data.DataLoader(test, batch_size=4, shuffle=False)
+    _, _, test_set = torch.utils.data.random_split(dataset, [0.7, 0.15, 0.15])
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=4, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
