@@ -23,7 +23,7 @@ def main():
     param_space = {
         "features": tune.choice([16, 32, 64]),
         "lr": tune.loguniform(1e-4, 1e-1),
-        "batch_size": tune.choice([4, 8, 16, 32])
+        "batch_size": tune.choice([4, 8, 16, 32]),
     }
 
     scheduler = ASHAScheduler(
@@ -31,7 +31,7 @@ def main():
         mode="min",
         max_t=max_num_epochs,
         grace_period=grace_period,
-        reduction_factor=reduction_factor
+        reduction_factor=reduction_factor,
     )
 
     tune_config = tune.TuneConfig(
@@ -40,15 +40,16 @@ def main():
     )
 
     train_with_resources = tune.with_resources(
-        train_depth,
-        resources={"cpu": 2, "gpu": 1}
+        train_depth, resources={"cpu": 8, "gpu": 1}
     )
 
     tuner = tune.Tuner(
         train_with_resources,
         tune_config=tune_config,
         param_space=param_space,
-        run_config=tune.RunConfig(storage_path="~/depth-model/results", name="test_experiment")
+        run_config=tune.RunConfig(
+            storage_path="~/depth-model/results", name="test_experiment"
+        ),
     )
     result = tuner.fit()
 
@@ -56,7 +57,9 @@ def main():
     print(f"Best result config: {best_result.config}")
     print(f"Best result final validation loss: {best_result.metrics['loss']}")
 
-    best_trained_model = SegNet(in_channels=3, out_channels=1, features=best_result.config["features"])
+    best_trained_model = SegNet(
+        in_channels=3, out_channels=1, features=best_result.config["features"]
+    )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     best_trained_model.to(device)
 
@@ -70,11 +73,14 @@ def main():
         test_loss_value = test_loss(best_trained_model)
         print("Best trial test set loss: {}".format(test_loss_value))
 
-        torch.save({
-            'model_state_dict': best_trained_model.state_dict(),
-            'config': best_result.config,
-            'test_loss': test_loss_value
-        }, 'best_depth_model.pth')
+        torch.save(
+            {
+                "model_state_dict": best_trained_model.state_dict(),
+                "config": best_result.config,
+                "test_loss": test_loss_value,
+            },
+            "best_depth_model.pth",
+        )
 
 
 def train_depth(config):
@@ -100,16 +106,20 @@ def train_depth(config):
 
     torch.manual_seed(42)
     dataset = DepthDataset(
-        images_dir='/content/data/depth_data/images',
-        depth_maps_dir='/content/data/depth_data/depth_maps',
+        images_dir="~/data/depth_data/images",
+        depth_maps_dir="~/data/depth_data/depth_maps",
         transform=ToTensor(),
     )
     train_set, val_set, _ = torch.utils.data.random_split(dataset, [0.7, 0.15, 0.15])
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=config["batch_size"], shuffle=True, num_workers=0)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size=config["batch_size"], shuffle=False, num_workers=0)
+    train_loader = torch.utils.data.DataLoader(
+        train_set, batch_size=config["batch_size"], shuffle=True, num_workers=0
+    )
+    val_loader = torch.utils.data.DataLoader(
+        val_set, batch_size=config["batch_size"], shuffle=False, num_workers=0
+    )
 
     for epoch in range(start_epoch, 10):
-        for (X, y) in train_loader:
+        for X, y in train_loader:
             X, y = X.to(device).float(), y.to(device).float()
 
             # zero the parameter gradient
@@ -125,7 +135,7 @@ def train_depth(config):
         # validation
         val_loss = 0.0
         val_steps = 0
-        for (X, y) in val_loader:
+        for X, y in val_loader:
             with torch.inference_mode():
                 X, y = X.to(device).float(), y.to(device).float()
                 model.eval()
@@ -147,16 +157,19 @@ def train_depth(config):
                 pickle.dump(checkpoint_data, fp)
 
             checkpoint = Checkpoint.from_directory(checkpoint_dir)
-            train.report({
-                "loss": val_loss / val_steps,
-            }, checkpoint=checkpoint)
+            train.report(
+                {
+                    "loss": val_loss / val_steps,
+                },
+                checkpoint=checkpoint,
+            )
 
 
 def test_loss(model):
     torch.manual_seed(42)
     dataset = DepthDataset(
-        images_dir='/content/data/depth_data/images',
-        depth_maps_dir='/content/data/depth_data/depth_maps',
+        images_dir="/home/ubuntu/data/depth_data/images",
+        depth_maps_dir="/home/ubuntu/data/depth_data/depth_maps",
         transform=ToTensor(),
     )
     _, _, test_set = torch.utils.data.random_split(dataset, [0.7, 0.15, 0.15])
