@@ -67,39 +67,92 @@ class SegNet(nn.Module):
         super(SegNet, self).__init__()
 
         # Encoder
+        # self.enc0 = EncoderBlock(in_channels, features)
+        # self.enc1 = EncoderBlock(features, features * 2)
+        # self.enc2 = EncoderBlock(features * 2, features * 4, depth=3)
+        # self.enc3 = EncoderBlock(features * 4, features * 8, depth=3)
+        self.encoder = Encoder(in_channels, features)
+
+        # Bottleneck
+        # self.bottleneck_enc = EncoderBlock(features * 8, features * 8, depth=3)
+        # self.bottleneck_dec = DecoderBlock(features * 8, features * 8, depth=3)
+        self.bottleneck = Bottleneck(features)
+
+        # Decoder
+        # self.dec0 = DecoderBlock(features * 8, features * 4, depth=3)
+        # self.dec1 = DecoderBlock(features * 4, features * 2, depth=3)
+        # self.dec2 = DecoderBlock(features * 2, features)
+        # self.dec3 = DecoderBlock(
+        #     features, out_channels, classification=classification
+        # )  # With activation
+        self.decoder = Decoder(features, out_channels, classification)
+
+    def forward(self, x):
+        # # encoder
+        # e0, ind0 = self.enc0(x)
+        # e1, ind1 = self.enc1(e0)
+        # e2, ind2 = self.enc2(e1)
+        # e3, ind3 = self.enc3(e2)
+
+        # # bottleneck
+        # b0, indb = self.bottleneck_enc(e3)
+        # b1 = self.bottleneck_dec(b0, indb)
+
+        # # decoder
+        # d0 = self.dec0(b1, ind3)
+        # d1 = self.dec1(d0, ind2)
+        # d2 = self.dec2(d1, ind1)
+
+        # # classification layer
+        # output = self.dec3(d2, ind0)
+        # return output
+
+        e3, inds = self.encoder(x)
+        b1 = self.bottleneck(e3)
+        output = self.decoder(b1, inds)
+
+        return output
+
+
+class Encoder(nn.Module):
+    def __init__(self, in_channels=3, features=64) -> None:
+        super(Encoder, self).__init__()
         self.enc0 = EncoderBlock(in_channels, features)
         self.enc1 = EncoderBlock(features, features * 2)
         self.enc2 = EncoderBlock(features * 2, features * 4, depth=3)
         self.enc3 = EncoderBlock(features * 4, features * 8, depth=3)
 
-        # Bottleneck
-        self.bottleneck_enc = EncoderBlock(features * 8, features * 8, depth=3)
-        self.bottleneck_dec = DecoderBlock(features * 8, features * 8, depth=3)
-
-        # Decoder
-        self.dec0 = DecoderBlock(features * 8, features * 4, depth=3)
-        self.dec1 = DecoderBlock(features * 4, features * 2, depth=3)
-        self.dec2 = DecoderBlock(features * 2, features)
-        self.dec3 = DecoderBlock(
-            features, out_channels, classification=classification
-        )  # With activation
-
     def forward(self, x):
-        # encoder
         e0, ind0 = self.enc0(x)
         e1, ind1 = self.enc1(e0)
         e2, ind2 = self.enc2(e1)
         e3, ind3 = self.enc3(e2)
+        return e3, [ind0, ind1, ind2, ind3]
 
-        # bottleneck
-        b0, indb = self.bottleneck_enc(e3)
+
+class Bottleneck(nn.Module):
+    def __init__(self, features=64) -> None:
+        super(Bottleneck, self).__init__()
+        self.bottleneck_enc = EncoderBlock(features * 8, features * 8, depth=3)
+        self.bottleneck_dec = DecoderBlock(features * 8, features * 8, depth=3)
+
+    def forward(self, x):
+        b0, indb = self.bottleneck_enc(x)
         b1 = self.bottleneck_dec(b0, indb)
+        return b1
 
-        # decoder
-        d0 = self.dec0(b1, ind3)
-        d1 = self.dec1(d0, ind2)
-        d2 = self.dec2(d1, ind1)
 
-        # classification layer
-        output = self.dec3(d2, ind0)
+class Decoder(nn.Module):
+    def __init__(self, features=64, out_channels=1, classification=False) -> None:
+        super(Decoder, self).__init__()
+        self.dec0 = DecoderBlock(features * 8, features * 4, depth=3)
+        self.dec1 = DecoderBlock(features * 4, features * 2, depth=3)
+        self.dec2 = DecoderBlock(features * 2, features)
+        self.dec3 = DecoderBlock(features, out_channels, classification=classification)
+
+    def forward(self, x, inds):
+        d0 = self.dec0(x, inds[3])
+        d1 = self.dec1(d0, inds[2])
+        d2 = self.dec2(d1, inds[1])
+        output = self.dec3(d2, inds[0])
         return output
