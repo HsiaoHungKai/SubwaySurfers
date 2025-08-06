@@ -1,5 +1,6 @@
 data/
 models/
+results/
 
 # Mac specific
 .DS_Store
